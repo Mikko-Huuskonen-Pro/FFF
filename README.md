@@ -1,121 +1,160 @@
-# Firefox Focus for Android
+# Kotisatama (FFF Fork) - v0.1
 
-_Browse like no one’s watching. The new Firefox Focus automatically blocks a wide range of online trackers — from the moment you launch it to the second you leave it. Easily erase your history, passwords and cookies, so you won’t get followed by things like unwanted ads._ 
+> **Tavoite**: Testata idean toimivuus — whitelist-pohjainen, yksityisyyttä korostava selainratkaisu, joka rajoittaa verkkosivujen lataamista ennalta määriteltyyn luotettujen sivustojen listaan.
 
-Firefox Focus provides automatic ad blocking and tracking protection on an easy-to-use private browser.
+---
 
-<a href="https://play.google.com/store/apps/details?id=org.mozilla.focus" target="_blank"><img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png" alt="Get it on Google Play" height="90"/></a>
+## 📌 Yleiskuvaus
 
-* [Google Play: Firefox Focus (Global)](https://play.google.com/store/apps/details?id=org.mozilla.focus)
-* [Google Play: Firefox Klar (Germany, Austria & Switzerland)](https://play.google.com/store/apps/details?id=org.mozilla.klar)
-* [Download APKs](https://github.com/mozilla-mobile/focus-android/releases)
+Kotisatama on **Firefox Focusin (FFF) forkki**, joka muokataan **whitelist-pohjaiseksi selaimeksi**. Tässä **v0.1-versiossa** testataan idean perustoiminnallisuutta:
 
+- **Whitelist-rajoitus**: Vain ennalta hyväksytyt sivustot ladataan.
+- **Yksinkertainen UI**: Perusselaintoiminnallisuus ilman turhia ominaisuuksia.
+- **Testaus**: Varmistetaan, että whitelist-toiminnallisuus estää ei-sallittuja sivustoja.
 
+---
 
-## Getting Involved
+## 🛠️ Teknologiat
 
+- **Pohja**: [Firefox Focus (FFF)](https://github.com/mozilla-mobile/focus-android) (arkistoitu 17.6.2024)
+- **Moottori**: GeckoView (Mozilla)
+- **Kieli**: Kotlin (Android), Java
+- **Tuleva integraatio**: Tauri 2.0 (Rust) + WebView
 
-We encourage you to participate in this open source project. We love Pull Requests, Bug Reports, ideas, (security) code reviews or any other kind of positive contribution. 
+---
 
-Before you attempt to make a contribution please read the [Community Participation Guidelines](https://www.mozilla.org/en-US/about/governance/policies/participation/).
+## 🚀 Asennus ja käynnistys
 
-* [Guide to Contributing](https://github.com/mozilla-mobile/shared-docs/blob/main/android/CONTRIBUTING.md) (**New contributors start here!**)
+### Edellytykset
+- Android Studio (uusin versio)
+- Java JDK 17+
+- Git
 
-* [View current Issues](https://github.com/mozilla-mobile/focus-android/issues), [view current Pull Requests](https://github.com/mozilla-mobile/focus-android/pulls), or [file a security issue][sec issue].
+### Asennusohjeet
+1. **Kloonaa repositorio**:
+   ```bash
+   git clone https://github.com/Mikko-Huuskonen-Pro/FFF.git
+   cd FFF
+   ```
 
-* Opt-in to our Mailing List [firefox-focus-public@](https://mail.mozilla.org/listinfo/firefox-focus-public) to keep up to date.
+2. **Avaa Android Studio**:
+   - Avaa projekti Android Studion kautta.
+   - Odota, että Gradle synkronoi riippuvuudet.
 
-* [View the Wiki](https://github.com/mozilla-mobile/focus-android/wiki).
+3. **Käynnistä emulaattorissa tai laitteella**:
+   - Valitse `app` moduuli ja käynnistä sovellus.
 
-**Beginners!** - Watch out for [Issues with the "Good First Issue" label](https://github.com/mozilla-mobile/focus-android/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22). These are easy bugs that have been left for first timers to have a go, get involved and make a positive contribution to the project!
+---
 
-## Build Instructions
+## ⚙️ Whitelist-toiminnallisuus (v0.1)
 
+### Tavoite
+Rajoittaa selaimen lataamaan **vain whitelist-sivustot**. Muut sivustot estetään ja näyttävät virheviestin.
 
-1. Clone or Download the repository:
+### Toteutus
+Whitelist-tarkistus lisätään `android-components`-kirjastoon, erityisesti:
+- **`browser-engine-gecko`**: Moottorin puoleinen rajoitus.
+- **`browser-session`**: Sessioiden hallinta ja URL-tarkistus.
 
-  ```shell
-  git clone https://github.com/mozilla-mobile/focus-android
-  ```
+### Esimerkki: Whitelist-tarkistus
+Whitelist-sivustot määritellään **`WhitelistManager`-luokassa** (uusi tiedosto):
 
-2. Import the project into Android Studio **or** build on the command line:
+```kotlin
+// WhitelistManager.kt
+class WhitelistManager {
+    private val whitelist = setOf(
+        "https://example.com",
+        "https://kotisatama.fi",
+        "https://wikipedia.org"
+    )
 
-  ```shell
-  ./gradlew clean app:assembleFocusDebug
-  ```
-
-3. Make sure to select the correct build variant in Android Studio:
-**focusArmDebug** for ARM
-**focusX86Debug** for X86
-**focusAarch64Debug** for ARM64
-
-## local.properties helpers
-You can speed up or enhance local development by setting a few helper flags available in `local.properties` which will be made easily available as gradle properties.
-
-### Automatically sign release builds
-To sign your release builds with your debug key automatically, add the following to `<proj-root>/local.properties`:
-
-```sh
-autosignReleaseWithDebugKey
+    fun isAllowed(url: String): Boolean {
+        return whitelist.any { allowed -> url.startsWith(allowed) }
+    }
+}
 ```
 
-With this line, release build variants will automatically be signed with your debug key (like debug builds), allowing them to be built and installed directly through Android Studio or the command line.
+### Integrointi selaimeen
+Whitelist-tarkistus lisätään **`WebRequestInterceptor`-luokkaan** (uusi tai muokattu):
 
-This is helpful when you're building release variants frequently, for example to test feature flags and or do performance analyses.
-
-### Building debuggable release variants
-
-Nightly, Beta and Release variants are getting published to Google Play and therefore are not debuggable. To locally create debuggable builds of those variants, add the following to `<proj-root>/local.properties`:
-
-```sh
-debuggable
+```kotlin
+// WebRequestInterceptor.kt
+class WebRequestInterceptor(private val whitelistManager: WhitelistManager) : WebRequestInterceptor {
+    override fun onLoadRequest(
+        request: WebRequest,
+        next: WebRequestInterceptor.Chain
+    ): WebResponse? {
+        if (!whitelistManager.isAllowed(request.uri)) {
+            // Estä pyynnöt, jotka eivät ole whitelistillä
+            return WebResponse.Builder()
+                .status(403)
+                .body("Sivusto ei ole sallittu Kotisatamassa.")
+                .build()
+        }
+        return next.proceed(request)
+    }
+}
 ```
 
-### Auto-publication workflow for android-components and application-services
-If you're making changes to these projects and want to test them in Focus, auto-publication workflow is the fastest, most reliable
-way to do that.
+### Rekisteröi interceptor
+Lisää interceptor **`BrowserEngine`-asetuksiin** (esim. `App.kt` tai `BrowserEngine.kt`):
 
-In `local.properties`, specify a relative path to your local `android-components` and/or `application-services` projects. E.g.:
-- `autoPublish.android-components.dir=../firefox-android/android-components`
-- `autoPublish.application-services.dir=../application-services`
+```kotlin
+// App.kt
+val whitelistManager = WhitelistManager()
+val interceptor = WebRequestInterceptor(whitelistManager)
 
-*Note that the Android Components project was already migrated to the new [firefox-android](https://github.com/mozilla-mobile/firefox-android) repository. Therefore, this auto publication workflow won't be neccessary for Android Components once Focus is integrated in the new repository as well.*
-
-Once these flags are set, your Focus builds will include any local modifications present in these projects.
-
-See a [demo of auto-publication workflow in action](https://www.youtube.com/watch?v=qZKlBzVvQGc).
-
-## Pre-push hooks
-To reduce review turn-around time, we'd like all pushes to run tests locally. We'd
-recommend you use our provided pre-push hook in `quality/pre-push-recommended.sh`.
-Using this hook will guarantee your hook gets updated as the repository changes.
-This hook tries to run as much as possible without taking too much time.
-
-To add it, run this command from the project root:
-```sh
-ln -s ../../quality/pre-push-recommended.sh .git/hooks/pre-push
+val engine = GeckoWebEngine.Builder()
+    .addWebRequestInterceptor(interceptor)
+    .build()
 ```
 
-To push without running the pre-push hook (e.g. doc updates):
-```sh
-git push <remote> --no-verify
-```
+---
 
-## Test Channel on Google PlayStore
-To get Focus Nightly on your device, follow these steps:
+## 📝 Testaus (v0.1)
 
-1) Visit https://groups.google.com/g/firefox-focus-pre-release and join the Google Group
-2) After you have joined the group opt-in to receive Nightly builds, again with the same Google account: https://play.google.com/apps/testing/org.mozilla.focus.nightly
-3) Download Firefox Focus (Nightly) from Google Play: https://play.google.com/store/apps/details?id=org.mozilla.focus.nightly
+### Testitapaukset
+| Toiminto | Odotettu tulos |
+|----------|-----------------|
+| Avaa whitelist-sivusto (esim. `https://example.com`) | Sivu latautuu normaalisti |
+| Avaa ei-whitelist-sivusto (esim. `https://google.com`) | Näytä virheviesti: "Sivusto ei ole sallittu Kotisatamassa." |
+| Yritä ladata sivua, joka ei ole whitelistillä | Estetään ja näytetään 403-virhe |
 
-Make sure you use the same Google Account for both steps.
+### Manuaalinen testaus
+1. Käynnistä sovellus emulaattorissa.
+2. Yritä avata sivustoja whitelistiltä ja sen ulkopuolelta.
+3. Varmista, että ei-whitelist-sivustot estetään.
 
+---
 
-## License
+## 🔜 Seuraavat vaiheet (v0.2+)
 
+- [ ] **Whitelistin dynaaminen hallinta**: Mahdollisuus lisätä/poistaa sivustoja UI:sta.
+- [ ] **Tauri 2.0 -integraatio**: Upota selain Tauri-sovellukseen Rustilla.
+- [ ] **Meilisearch-hakukone**: Hakutoiminnallisuus, joka rajoittuu whitelist-sivustoihin.
+- [ ] **Sertifikaattien hallinta**: Laitteiden tunnistus sertifikaateilla (Ilio-palvelin).
+- [ ] **Offline-tuki**: Whitelistin ja sertifikaattien paikallinen tallennus (SQLite).
 
-    This Source Code Form is subject to the terms of the Mozilla Public
-    License, v. 2.0. If a copy of the MPL was not distributed with this
-    file, You can obtain one at http://mozilla.org/MPL/2.0/
+---
 
-[sec issue]: https://bugzilla.mozilla.org/enter_bug.cgi?assigned_to=nobody%40mozilla.org&bug_file_loc=http%3A%2F%2F&bug_ignored=0&bug_severity=normal&bug_status=NEW&cf_fx_iteration=---&cf_fx_points=---&component=Security%3A%20Android&contenttypemethod=autodetect&contenttypeselection=text%2Fplain&defined_groups=1&flag_type-4=X&flag_type-607=X&flag_type-791=X&flag_type-800=X&flag_type-803=X&form_name=enter_bug&groups=firefox-core-security&maketemplate=Remember%20values%20as%20bookmarkable%20template&op_sys=Unspecified&priority=--&product=Focus&rep_platform=Unspecified&target_milestone=---&version=---
+## 🤝 Osallistuminen
+
+Jos haluat osallistua kehitykseen:
+1. **Forkkaa repositorio**.
+2. **Luo uusi branch** (`git checkout -b feature/whitelist`).
+3. **Tee muutokset** ja lähetä **Pull Request**.
+
+---
+
+## 📜 Lisenssi
+
+Projekti noudattaa **Mozilla Public License 2.0** -lisenssiä (perintönä FFF:ltä).
+
+---
+
+## 🔗 Linkit
+
+- [Alkuperäinen FFF-repositorio (arkistoitu)](https://github.com/mozilla-mobile/focus-android)
+- [Mozilla Central (gecko-dev)](https://github.com/mozilla/gecko-dev)
+- [Tauri 2.0](https://tauri.app/v2/)
+- [Meilisearch](https://www.meilisearch.com/)
